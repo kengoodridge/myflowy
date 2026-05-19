@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { clear } from 'idb-keyval';
 import { IDBLocalStore } from '../store/IDBLocalStore';
 import type { Task } from '../types';
 
@@ -15,7 +16,8 @@ const task: Task = {
 describe('IDBLocalStore', () => {
   let store: IDBLocalStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clear();
     store = new IDBLocalStore();
   });
 
@@ -49,6 +51,15 @@ describe('IDBLocalStore', () => {
     await store.setAll({ 'task-2': newTask });
     expect(await store.get('task-1')).toBeUndefined();
     expect(await store.get('task-2')).toEqual(newTask);
+  });
+
+  it('setAll preserves metadata', async () => {
+    await store.setPendingUpload(true);
+    await store.setLastSyncedAt('2026-01-01T00:00:00.000Z');
+    const newTask: Task = { ...task, id: 'task-2', text: 'World' };
+    await store.setAll({ 'task-2': newTask });
+    expect(await store.getPendingUpload()).toBe(true);
+    expect(await store.getLastSyncedAt()).toBe('2026-01-01T00:00:00.000Z');
   });
 
   it('pendingUpload defaults to false', async () => {

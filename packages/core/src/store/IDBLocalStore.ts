@@ -1,4 +1,4 @@
-import { get, set, del, entries, clear } from 'idb-keyval';
+import { get, set, del, keys, entries, delMany, setMany } from 'idb-keyval';
 import type { Task, TaskMap, LocalStore } from '../types';
 
 const PENDING_KEY = '__pending__';
@@ -28,8 +28,11 @@ export class IDBLocalStore implements LocalStore {
   }
 
   async setAll(tasks: TaskMap): Promise<void> {
-    await clear();
-    await Promise.all(Object.values(tasks).map((t) => set(t.id, t)));
+    const existing = await keys<string>();
+    const taskKeys = existing.filter((k) => !META_KEYS.has(k));
+    if (taskKeys.length > 0) await delMany(taskKeys);
+    const entries = Object.entries(tasks) as [string, Task][];
+    if (entries.length > 0) await setMany(entries);
   }
 
   async getPendingUpload(): Promise<boolean> {
