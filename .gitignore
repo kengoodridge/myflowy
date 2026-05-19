@@ -4,3 +4,7 @@ lib
 .rpt2_cache/
 t
 .DS_Store
+dist
+package-lock.json
+tsconfig.tsbuildinfo
+*.tsbuildinfo
