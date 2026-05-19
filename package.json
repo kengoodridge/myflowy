@@ -7,7 +7,9 @@
   ],
   "scripts": {
     "build:core": "yarn workspace @myflowy/core build",
-    "test": "yarn workspace @myflowy/core test",
-    "test:ci": "yarn workspace @myflowy/core test --reporter=verbose"
+    "build:web": "yarn workspace @myflowy/web build",
+    "dev:web": "yarn workspace @myflowy/web dev",
+    "test": "yarn workspace @myflowy/core test && yarn workspace @myflowy/web test",
+    "test:ci": "yarn workspace @myflowy/core test --reporter=verbose && yarn workspace @myflowy/web test --reporter=verbose"
   }
 }

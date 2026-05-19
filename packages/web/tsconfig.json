@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src"],
+  "references": [{ "path": "../core" }]
+}
