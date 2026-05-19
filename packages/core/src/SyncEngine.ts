@@ -49,7 +49,9 @@ export class SyncEngine {
     }
 
     const lastSynced = await this.store.getLastSyncedAt();
-    if (!lastSynced || remote.updatedAt > lastSynced) {
+    const remoteDate = new Date(remote.updatedAt);
+    const localDate = lastSynced ? new Date(lastSynced) : null;
+    if (!localDate || remoteDate > localDate) {
       await this.store.setAll(remote.tasks);
       await this.store.setLastSyncedAt(remote.updatedAt);
       await this.store.setPendingUpload(false);
@@ -71,12 +73,20 @@ export class SyncEngine {
     if (pending) await this.flushToDrive();
   }
 
+  destroy(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+  }
+
   private scheduleDriveUpload(): void {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(async () => {
       try {
         await this.flushToDrive();
-      } catch {
+      } catch (err) {
+        console.error('[SyncEngine] Drive upload failed, queuing for retry:', err);
         await this.store.setPendingUpload(true);
       }
     }, this.DEBOUNCE_MS);

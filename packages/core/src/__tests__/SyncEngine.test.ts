@@ -149,3 +149,24 @@ describe('SyncEngine.flushToDrive', () => {
     expect(await store.getPendingUpload()).toBe(false);
   });
 });
+
+describe('SyncEngine.scheduleDriveUpload (failure path)', () => {
+  it('sets pendingUpload=true when Drive flush fails', async () => {
+    const store = new MemoryStore();
+    const drive = new MockDriveSync();
+    const engine = new SyncEngine(store, drive as any);
+
+    // Make drive.write throw
+    drive.write = async () => { throw new Error('Network error'); };
+
+    const task: Task = { id: 't1', text: 'A', checked: false, pinned: false, collapsed: false, children: [] };
+    await engine.setTask(task);
+
+    // Wait for the debounce timer to fire (500ms)
+    await vi.waitFor(async () => {
+      expect(await store.getPendingUpload()).toBe(true);
+    }, { timeout: 1000 });
+
+    engine.destroy();
+  });
+});
