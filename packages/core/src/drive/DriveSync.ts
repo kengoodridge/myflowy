@@ -3,6 +3,7 @@ import { findFolder, createFolder, findFile, readFile, createFile, updateFile } 
 
 const FOLDER_NAME = 'MyFlowy';
 const FILE_NAME = 'myflowy.json';
+const FILE_VERSION = 1;
 
 export class DriveSync {
   private folderId: string | null = null;
@@ -20,7 +21,16 @@ export class DriveSync {
     this.fileId = await findFile(FILE_NAME, folderId);
     if (!this.fileId) return null;
     const raw = await readFile(this.fileId);
-    return JSON.parse(raw) as DriveFile;
+    let data: DriveFile;
+    try {
+      data = JSON.parse(raw) as DriveFile;
+    } catch {
+      return null;
+    }
+    if (data.version !== FILE_VERSION) {
+      throw new Error(`Unsupported DriveFile version: ${data.version}`);
+    }
+    return data;
   }
 
   async write(tasks: TaskMap): Promise<void> {
@@ -29,7 +39,7 @@ export class DriveSync {
       this.fileId = await findFile(FILE_NAME, folderId);
     }
     const file: DriveFile = {
-      version: 1,
+      version: FILE_VERSION,
       tasks,
       updatedAt: new Date().toISOString(),
     };

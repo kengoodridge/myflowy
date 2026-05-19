@@ -44,6 +44,17 @@ describe('DriveSync.read', () => {
   });
 });
 
+describe('DriveSync.read (edge cases)', () => {
+  it('returns null when file content is corrupt JSON', async () => {
+    vi.mocked(driveApi.findFolder).mockResolvedValue('folder-id');
+    vi.mocked(driveApi.findFile).mockResolvedValue('file-id');
+    vi.mocked(driveApi.readFile).mockResolvedValue('not-valid-json{{{');
+
+    const sync = new DriveSync();
+    expect(await sync.read()).toBeNull();
+  });
+});
+
 describe('DriveSync.write', () => {
   it('creates the file on first write', async () => {
     vi.mocked(driveApi.findFolder).mockResolvedValue('folder-id');
@@ -88,5 +99,19 @@ describe('DriveSync.write', () => {
     await sync.write(mockTasks);
 
     expect(driveApi.createFolder).toHaveBeenCalledWith('MyFlowy');
+  });
+
+  it('updates when file exists but read() was never called', async () => {
+    vi.mocked(driveApi.findFolder).mockResolvedValue('folder-id');
+    vi.mocked(driveApi.findFile).mockResolvedValue('existing-file-id');
+
+    const sync = new DriveSync();
+    await sync.write(mockTasks);
+
+    expect(driveApi.updateFile).toHaveBeenCalledWith(
+      'existing-file-id',
+      expect.stringContaining('"version":1')
+    );
+    expect(driveApi.createFile).not.toHaveBeenCalled();
   });
 });
