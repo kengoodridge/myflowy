@@ -1,9 +1,7 @@
 import type { Task } from './types';
 
 export function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  );
+  return crypto.randomUUID();
 }
 
 export function initialRoot(): Task {
