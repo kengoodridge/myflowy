@@ -26,11 +26,22 @@ myflowy/
 **Tooling:**
 - Yarn workspaces (already in use)
 - TypeScript project references across packages
-- Vite for web build (replaces Rollup)
+- Vite for web build (replaces Rollup + node-sass — both archived/deprecated)
 - Expo managed workflow for mobile
 - `electron-builder` for desktop packaging
 
 The existing vanilla TS source is preserved in git history. New packages are built alongside it; old code deleted once parity is verified.
+
+### Supply Chain Hardening
+
+The entire old devDependency tree (rollup, node-sass, tslint, html-minifier) is replaced in this refactor. All 179 vulnerabilities in the current `yarn.lock` live in that tree — none are in the three runtime dependencies — and they disappear with it.
+
+For the new lockfile:
+
+- **`.npmrc`** at the repo root sets `ignore-scripts=true`. Packages that legitimately need postInstall (e.g. `electron` for binary download) are explicitly allowlisted via `config.unsafe-perm` or noted in the implementation plan.
+- **Exact version pins** for all auth-related packages in `package.json` (no `^` prefix on `@react-oauth/google` or `@react-native-google-signin/google-signin`). Auth libraries that receive a malicious patch release are high-impact.
+- **`yarn --frozen-lockfile`** required in CI — no lockfile drift allowed.
+- **[socket.dev](https://socket.dev)** added to the repo for continuous supply chain monitoring (free tier covers open-source projects).
 
 ---
 
@@ -164,7 +175,7 @@ Refresh token stored via Electron's `safeStorage` (OS keychain). Exchanged for a
 
 ### Auth
 
-- `expo-auth-session` with Google provider (system browser, not embedded WebView)
+- `@react-native-google-signin/google-signin` — Expo's current recommended library for Google auth on mobile; wraps Google's native SDK directly rather than a generic browser flow (`expo-auth-session` is a generic fallback; Google-specific native SDK is preferred per Expo docs)
 - On success: `core.setAccessToken(token)`
 - Refresh token stored in `expo-secure-store`; exchanged for access token on startup
 - Requires separate OAuth client IDs for iOS and Android (see Google Cloud setup doc)
@@ -222,7 +233,18 @@ https://www.googleapis.com/auth/drive.file
 |---|---|---|
 | Web | GIS silent refresh | Managed by GIS |
 | Electron | Exchanged from refresh token on startup | `safeStorage` (OS keychain) |
-| Mobile | Exchanged from refresh token on startup | `expo-secure-store` |
+| Mobile | Managed by `@react-native-google-signin/google-signin` native SDK | `expo-secure-store` |
+
+### Auth Package Safety
+
+Two packages with similar names exist on npm — use only the scoped, correct ones:
+
+| Use | Avoid |
+|---|---|
+| `@react-oauth/google` (web) | `react-oauth-google`, `react-google-oauth` |
+| `@react-native-google-signin/google-signin` (mobile) | `react-native-google-signin` (old unscoped fork) |
+
+Both correct packages are pinned to exact versions (no `^`) in their respective `package.json` files.
 
 ---
 
