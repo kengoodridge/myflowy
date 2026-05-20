@@ -13,7 +13,9 @@
       "Bash(git commit *)",
       "Bash(mkdir -p /Users/kengoodridge/Development/play/myflowy/packages/web/src/store /Users/kengoodridge/Development/play/myflowy/packages/web/src/hooks /Users/kengoodridge/Development/play/myflowy/packages/web/src/utils /Users/kengoodridge/Development/play/myflowy/packages/web/src/components /Users/kengoodridge/Development/play/myflowy/packages/web/src/styles)",
       "Bash(node -e ' *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(podman --version)",
+      "Read(//usr/local/bin/**)"
     ],
     "additionalDirectories": [
       "/Users/kengoodridge/Development/play/myflowy/packages/web/src"
