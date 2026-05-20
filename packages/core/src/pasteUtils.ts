@@ -47,9 +47,11 @@ export function insertParsedLines(
   store: TaskEditor,
   afterTaskId: string,
   parentId: string,
+  consumedParentId?: string,
 ): string {
   const parentStack: string[] = [];
   parentStack[0] = parentId;
+  if (consumedParentId) parentStack[1] = consumedParentId;
 
   const lastAtLevel: (string | null)[] = [];
   lastAtLevel[0] = afterTaskId;

@@ -6,6 +6,76 @@ import { useEffect } from 'react';
 
 type DropPos = 'before' | 'after' | 'inside';
 
+type ParsedLine = { level: number; text: string };
+
+function parseHtmlLines(html: string): ParsedLine[] | null {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+
+  function getDirectText(li: Element): string {
+    let text = '';
+    for (const node of li.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent ?? '';
+      } else {
+        const tag = (node as Element).tagName;
+        if (tag !== 'UL' && tag !== 'OL') {
+          text += (node as Element).textContent ?? '';
+        }
+      }
+    }
+    return text;
+  }
+
+  function listDepth(li: Element): number {
+    let depth = 0;
+    let parent = li.parentElement;
+    while (parent && parent !== div) {
+      if (parent.tagName === 'UL' || parent.tagName === 'OL') depth++;
+      parent = parent.parentElement;
+    }
+    return depth;
+  }
+
+  const items: ParsedLine[] = [];
+
+  // Workflowy copies the root item as a plain element (e.g. <span class="name">)
+  // BEFORE the <ul> that holds its children. Detect this and add it at level 0.
+  const firstList = div.querySelector('ul, ol');
+  let hasRoot = false;
+  if (firstList) {
+    let prev = firstList.previousElementSibling;
+    while (prev) {
+      const tag = prev.tagName;
+      if (tag !== 'META' && tag !== 'STYLE' && tag !== 'SCRIPT') {
+        const text = prev.textContent?.trim();
+        if (text) {
+          items.push({ level: 0, text });
+          hasRoot = true;
+          break;
+        }
+      }
+      prev = prev.previousElementSibling;
+    }
+  }
+
+  for (const li of div.querySelectorAll('li')) {
+    const text = getDirectText(li).trim();
+    if (text) items.push({ level: listDepth(li), text });
+  }
+
+  if (items.length === 0) return null;
+
+  // When there's a root item, children already sit at depth >= 1 — keep that.
+  // When there's no root, normalize so the shallowest item lands at level 0.
+  if (!hasRoot) {
+    const minLevel = Math.min(...items.map(i => i.level));
+    if (minLevel > 0) return items.map(i => ({ ...i, level: i.level - minLevel }));
+  }
+
+  return items;
+}
+
 function getCursorPosition(el: HTMLElement): number {
   const sel = window.getSelection();
   if (sel?.rangeCount) {
@@ -91,7 +161,6 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const dragId = e.dataTransfer.types.includes('taskid') ? '' : '';
     // Use element position to determine drop zone
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
@@ -225,19 +294,27 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    const text = e.clipboardData.getData('text/plain');
-    const lines = parsePastedText(text);
+    const html = e.clipboardData.getData('text/html');
+    const plain = e.clipboardData.getData('text/plain');
+    const htmlLines = html ? parseHtmlLines(html) : null;
+    const lines = htmlLines ?? parsePastedText(plain);
+    console.debug('[paste] types:', [...e.clipboardData.types]);
+    console.debug('[paste] html:', html);
+    console.debug('[paste] plain:', plain);
+    console.debug('[paste] parsed lines:', lines);
     if (lines.length <= 1) return;
     e.preventDefault();
-    let afterId = id;
+    const afterId = id;
     let startLines = lines;
+    let consumedParentId: string | undefined;
     if (task.text === '' && lines[0].level === 0) {
       store.updateTask({ ...task, text: lines[0].text });
       if (divRef.current) divRef.current.textContent = lines[0].text;
       startLines = lines.slice(1);
+      consumedParentId = id;
     }
     if (startLines.length > 0) {
-      const lastId = insertParsedLines(startLines, store, afterId, parentId);
+      const lastId = insertParsedLines(startLines, store, afterId, parentId, consumedParentId);
       onFocusRequest(lastId);
     }
   };

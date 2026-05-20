@@ -12,7 +12,8 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(mkdir -p /Users/kengoodridge/Development/play/myflowy/packages/web/src/store /Users/kengoodridge/Development/play/myflowy/packages/web/src/hooks /Users/kengoodridge/Development/play/myflowy/packages/web/src/utils /Users/kengoodridge/Development/play/myflowy/packages/web/src/components /Users/kengoodridge/Development/play/myflowy/packages/web/src/styles)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "/Users/kengoodridge/Development/play/myflowy/packages/web/src"
