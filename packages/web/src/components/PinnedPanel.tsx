@@ -32,12 +32,6 @@ export function PinnedPanel({ tasks, store, onNavigate }: PinnedPanelProps) {
         return (
           <div key={task.id} className="pin-card">
             <div className="pin-card-header">
-              <input
-                type="checkbox"
-                className="task-checkbox"
-                checked={task.checked}
-                onChange={() => store.updateTask({ ...task, checked: !task.checked })}
-              />
               <button
                 className="pin-card-text"
                 onClick={() => onNavigate(task.id)}
