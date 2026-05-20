@@ -28,7 +28,6 @@ export function PinnedPanel({ tasks, store, onNavigate }: PinnedPanelProps) {
     <section className="pinned-panel">
       {pinned.map((task) => {
         const path = getAncestorPath(task.id, tasks);
-        const parentId = findParent(task.id, tasks);
 
         return (
           <div key={task.id} className="pin-card">
@@ -41,7 +40,7 @@ export function PinnedPanel({ tasks, store, onNavigate }: PinnedPanelProps) {
               />
               <button
                 className="pin-card-text"
-                onClick={() => parentId && onNavigate(parentId)}
+                onClick={() => onNavigate(task.id)}
                 title="Navigate to task"
               >
                 {task.text || '(empty)'}
