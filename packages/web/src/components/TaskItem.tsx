@@ -304,6 +304,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
     console.debug('[paste] parsed lines:', lines);
     if (lines.length <= 1) return;
     e.preventDefault();
+    store.beginBatch();
     const afterId = id;
     let startLines = lines;
     let consumedParentId: string | undefined;
@@ -317,6 +318,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
       const lastId = insertParsedLines(startLines, store, afterId, parentId, consumedParentId);
       onFocusRequest(lastId);
     }
+    store.endBatch();
   };
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {

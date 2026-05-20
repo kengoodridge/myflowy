@@ -5,6 +5,9 @@ import type { SyncEngine } from '@myflowy/core';
 export class TaskStore extends EventTarget {
   private engine: SyncEngine;
   private tasks: TaskMap = {};
+  private undoStack: TaskMap[] = [];
+  private batching = false;
+  private readonly MAX_UNDO = 100;
 
   constructor(engine: SyncEngine) {
     super();
@@ -41,6 +44,43 @@ export class TaskStore extends EventTarget {
     return this.tasks;
   }
 
+  // --- undo ---
+
+  private pushUndo(): void {
+    if (this.batching) return;
+    this.undoStack.push(this.tasks);
+    if (this.undoStack.length > this.MAX_UNDO) this.undoStack.shift();
+  }
+
+  beginBatch(): void {
+    if (this.batching) return;
+    this.undoStack.push(this.tasks);
+    if (this.undoStack.length > this.MAX_UNDO) this.undoStack.shift();
+    this.batching = true;
+  }
+
+  endBatch(): void {
+    this.batching = false;
+  }
+
+  undo(): void {
+    const prev = this.undoStack.pop();
+    if (!prev) return;
+    const before = this.tasks;
+    this.tasks = prev;
+    this.emit();
+    for (const id of Object.keys(before)) {
+      if (!prev[id]) this.engine.removeTask(id).catch(console.error);
+    }
+    for (const [id, task] of Object.entries(prev)) {
+      if (!before[id] || before[id] !== task) {
+        this.engine.setTask(task).catch(console.error);
+      }
+    }
+  }
+
+  // --- mutations ---
+
   updateTask(task: Task): void {
     this.tasks = { ...this.tasks, [task.id]: task };
     this.emit();
@@ -48,6 +88,7 @@ export class TaskStore extends EventTarget {
   }
 
   addTask(parentId: string, afterId: string | null): string {
+    this.pushUndo();
     const id = uuid();
     const newTask: Task = {
       id,
@@ -74,6 +115,7 @@ export class TaskStore extends EventTarget {
   }
 
   removeTask(id: string, parentId: string): void {
+    this.pushUndo();
     const parent = this.tasks[parentId];
     const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
     const { [id]: _removed, ...rest } = this.tasks;
@@ -90,6 +132,7 @@ export class TaskStore extends EventTarget {
     targetParentId: string,
     position: 'before' | 'after' | 'inside',
   ): void {
+    this.pushUndo();
     const oldParent = this.tasks[dragParentId];
     const updatedOldParent = { ...oldParent, children: oldParent.children.filter((c) => c !== dragId) };
     let tasks = { ...this.tasks, [dragParentId]: updatedOldParent };
@@ -115,6 +158,7 @@ export class TaskStore extends EventTarget {
   }
 
   removeTaskDeep(id: string, parentId: string): void {
+    this.pushUndo();
     const descendants = this.collectDescendants(id);
     const parent = this.tasks[parentId];
     const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
@@ -143,6 +187,7 @@ export class TaskStore extends EventTarget {
   }
 
   indentTask(id: string, parentId: string): void {
+    this.pushUndo();
     const parent = this.tasks[parentId];
     const idx = parent.children.indexOf(id);
     if (idx === 0) return;
@@ -157,6 +202,7 @@ export class TaskStore extends EventTarget {
   }
 
   outdentTask(id: string, parentId: string, grandparentId: string): void {
+    this.pushUndo();
     const parent = this.tasks[parentId];
     const grandparent = this.tasks[grandparentId];
     const parentIdx = grandparent.children.indexOf(parentId);
@@ -171,6 +217,7 @@ export class TaskStore extends EventTarget {
   }
 
   moveTaskUp(id: string, parentId: string): void {
+    this.pushUndo();
     const parent = this.tasks[parentId];
     const idx = parent.children.indexOf(id);
     if (idx === 0) return;
@@ -183,6 +230,7 @@ export class TaskStore extends EventTarget {
   }
 
   moveTaskDown(id: string, parentId: string): void {
+    this.pushUndo();
     const parent = this.tasks[parentId];
     const idx = parent.children.indexOf(id);
     if (idx === parent.children.length - 1) return;

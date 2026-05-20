@@ -95,6 +95,14 @@ export function App() {
         return;
       }
       if (!(e.ctrlKey || e.metaKey)) return;
+
+      if (e.key === 'z') {
+        e.preventDefault();
+        taskStore.undo();
+        setFocusId(null);
+        return;
+      }
+
       if (e.key !== 'c' && e.key !== 'x') return;
       const sel = selectedIdsRef.current;
       if (sel.size === 0) return;
@@ -105,9 +113,11 @@ export function App() {
       navigator.clipboard.writeText(text).catch(console.error);
       if (e.key === 'x') {
         const deletions = topLevel.map((id) => ({ id, parentId: findParent(id, t) }));
+        taskStore.beginBatch();
         for (const { id, parentId } of deletions) {
           if (parentId) taskStore.removeTaskDeep(id, parentId);
         }
+        taskStore.endBatch();
         setSelectedIds(new Set());
         setFocusId(null);
       }
