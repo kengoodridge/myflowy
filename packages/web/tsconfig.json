@@ -6,7 +6,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "composite": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "vite/client"]
   },
   "include": ["src"],
   "exclude": ["src/__tests__", "dist"],
