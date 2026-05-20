@@ -217,6 +217,7 @@ body {
 
 .breadcrumb-sep {
   color: #aaa;
+  padding: 0 0.35rem;
 }
 
 .breadcrumb-current {
