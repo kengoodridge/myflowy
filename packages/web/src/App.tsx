@@ -32,6 +32,7 @@ export function App() {
   );
   const tasks = useTasks(taskStore);
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   const [rootId, setRootId] = useState('root');
   const [syncState, setSyncState] = useState<SyncState>({ status: 'idle' });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -177,13 +178,8 @@ export function App() {
         selectedIds={selectedIds}
         onRowEnter={handleRowEnter}
       />
-      <Controls
-        tasks={tasks}
-        store={taskStore}
-        focusId={focusId}
-        onFocusRequest={setFocusId}
-      />
-      <Sidebar />
+      {/* <Controls tasks={tasks} store={taskStore} focusId={focusId} onFocusRequest={setFocusId} /> */}
+      <Sidebar open={showHelp} onToggle={() => setShowHelp((v) => !v)} />
     </AuthGate>
   );
 }
