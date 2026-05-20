@@ -1,5 +1,6 @@
 import type { Task, TaskMap, LocalStore } from './types';
 import { DriveSync } from './drive/DriveSync';
+import { AuthError } from './drive/driveApi';
 import { initialRoot } from './utils';
 
 export class SyncEngine {
@@ -7,10 +8,20 @@ export class SyncEngine {
   private drive: DriveSync;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly DEBOUNCE_MS = 500;
+  private onAuthError?: () => void;
+  private onSyncComplete?: (err?: Error, fileUrl?: string | null) => void;
 
   constructor(store: LocalStore, drive?: DriveSync) {
     this.store = store;
     this.drive = drive ?? new DriveSync();
+  }
+
+  setAuthErrorHandler(handler: () => void): void {
+    this.onAuthError = handler;
+  }
+
+  setSyncCompleteHandler(handler: (err?: Error, fileUrl?: string | null) => void): void {
+    this.onSyncComplete = handler;
   }
 
   async initialize(): Promise<TaskMap> {
@@ -85,9 +96,16 @@ export class SyncEngine {
     this.debounceTimer = setTimeout(async () => {
       try {
         await this.flushToDrive();
+        this.onSyncComplete?.(undefined, this.drive.getFileUrl());
       } catch (err) {
-        console.error('[SyncEngine] Drive upload failed, queuing for retry:', err);
+        if (err instanceof AuthError) {
+          this.onAuthError?.();
+          return;
+        }
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error('[SyncEngine] Drive upload failed, queuing for retry:', error);
         await this.store.setPendingUpload(true);
+        this.onSyncComplete?.(error);
       }
     }, this.DEBOUNCE_MS);
   }

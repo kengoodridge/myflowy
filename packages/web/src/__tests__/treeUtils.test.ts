@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getVisibleOrder, findParent } from '../utils/treeUtils';
+import { getVisibleOrder, findParent } from '@myflowy/core';
 import type { TaskMap } from '@myflowy/core';
 
 function makeTask(id: string, children: string[] = [], collapsed = false) {

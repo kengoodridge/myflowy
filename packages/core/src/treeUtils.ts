@@ -1,4 +1,4 @@
-import type { TaskMap } from '@myflowy/core';
+import type { TaskMap } from './types';
 
 export function getVisibleOrder(rootId: string, tasks: TaskMap): string[] {
   const order: string[] = [];
@@ -23,4 +23,11 @@ export function findParent(id: string, tasks: TaskMap): string | null {
     if (task.children.includes(id)) return taskId;
   }
   return null;
+}
+
+export function isAncestorOf(ancestorId: string, id: string, tasks: TaskMap): boolean {
+  const ancestor = tasks[ancestorId];
+  if (!ancestor) return false;
+  if (ancestor.children.includes(id)) return true;
+  return ancestor.children.some((childId) => isAncestorOf(childId, id, tasks));
 }

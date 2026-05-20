@@ -1,7 +1,7 @@
 import React from 'react';
 import type { TaskMap } from '@myflowy/core';
 import type { TaskStore } from '../store/TaskStore';
-import { findParent } from '../utils/treeUtils';
+import { findParent } from '@myflowy/core';
 
 export interface ControlsProps {
   tasks: TaskMap;

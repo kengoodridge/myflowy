@@ -1,5 +1,5 @@
 import type { Task, TaskMap } from '@myflowy/core';
-import { uuid } from '@myflowy/core';
+import { uuid, AuthError } from '@myflowy/core';
 import type { SyncEngine } from '@myflowy/core';
 
 export class TaskStore extends EventTarget {
@@ -9,6 +9,11 @@ export class TaskStore extends EventTarget {
   constructor(engine: SyncEngine) {
     super();
     this.engine = engine;
+    engine.setAuthErrorHandler(() => this.dispatchEvent(new Event('auth-error')));
+    engine.setSyncCompleteHandler((err) => {
+      const detail = err ? { ok: false, message: err.message } : { ok: true, message: '' };
+      this.dispatchEvent(new CustomEvent('sync-complete', { detail }));
+    });
   }
 
   async initialize(): Promise<void> {
@@ -17,10 +22,18 @@ export class TaskStore extends EventTarget {
   }
 
   async syncFromDrive(): Promise<void> {
-    const remote = await this.engine.syncFromDrive();
-    if (remote) {
-      this.tasks = remote;
-      this.emit();
+    try {
+      const remote = await this.engine.syncFromDrive();
+      if (remote) {
+        this.tasks = remote;
+        this.emit();
+      }
+    } catch (err) {
+      if (err instanceof AuthError) {
+        this.dispatchEvent(new Event('auth-error'));
+      } else {
+        throw err;
+      }
     }
   }
 
@@ -68,6 +81,65 @@ export class TaskStore extends EventTarget {
     this.emit();
     this.engine.removeTask(id).catch(console.error);
     this.engine.setTask(updatedParent).catch(console.error);
+  }
+
+  moveTask(
+    dragId: string,
+    dragParentId: string,
+    targetId: string,
+    targetParentId: string,
+    position: 'before' | 'after' | 'inside',
+  ): void {
+    const oldParent = this.tasks[dragParentId];
+    const updatedOldParent = { ...oldParent, children: oldParent.children.filter((c) => c !== dragId) };
+    let tasks = { ...this.tasks, [dragParentId]: updatedOldParent };
+
+    if (position === 'inside') {
+      const target = tasks[targetId];
+      const updatedTarget = { ...target, children: [...target.children, dragId], collapsed: false };
+      tasks = { ...tasks, [targetId]: updatedTarget };
+      this.engine.setTask(updatedTarget).catch(console.error);
+    } else {
+      const targetParent = tasks[targetParentId];
+      const children = [...targetParent.children];
+      const targetIdx = children.indexOf(targetId);
+      children.splice(position === 'before' ? targetIdx : targetIdx + 1, 0, dragId);
+      const updatedTargetParent = { ...targetParent, children };
+      tasks = { ...tasks, [targetParentId]: updatedTargetParent };
+      this.engine.setTask(updatedTargetParent).catch(console.error);
+    }
+
+    this.tasks = tasks;
+    this.emit();
+    this.engine.setTask(updatedOldParent).catch(console.error);
+  }
+
+  removeTaskDeep(id: string, parentId: string): void {
+    const descendants = this.collectDescendants(id);
+    const parent = this.tasks[parentId];
+    const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
+    let newTasks: typeof this.tasks = { ...this.tasks, [parentId]: updatedParent };
+    for (const descId of descendants) {
+      const { [descId]: _, ...rest } = newTasks;
+      newTasks = rest;
+    }
+    this.tasks = newTasks;
+    this.emit();
+    for (const descId of descendants) {
+      this.engine.removeTask(descId).catch(console.error);
+    }
+    this.engine.setTask(updatedParent).catch(console.error);
+  }
+
+  private collectDescendants(id: string): string[] {
+    const result: string[] = [id];
+    const task = this.tasks[id];
+    if (task) {
+      for (const childId of task.children) {
+        result.push(...this.collectDescendants(childId));
+      }
+    }
+    return result;
   }
 
   indentTask(id: string, parentId: string): void {

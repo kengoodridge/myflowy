@@ -14,6 +14,8 @@ function makeEngine(initialTasks?: TaskMap): SyncEngine {
     syncFromDrive: vi.fn().mockResolvedValue(null),
     flushToDrive: vi.fn().mockResolvedValue(undefined),
     onNetworkRestore: vi.fn().mockResolvedValue(undefined),
+    setAuthErrorHandler: vi.fn(),
+    setSyncCompleteHandler: vi.fn(),
     destroy: vi.fn(),
   } as unknown as SyncEngine;
 }

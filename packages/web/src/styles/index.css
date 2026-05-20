@@ -5,12 +5,66 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Open Sans', 'Helvetica Neue', sans-serif;
   max-width: 800px;
   margin: 0 auto;
-  padding: 1rem;
-  padding-bottom: 4rem;
+  padding: 1rem 2rem;
+  padding-bottom: 5rem;
+  color: #222;
 }
+
+/* ── Sync banner ── */
+
+.sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 1rem;
+  background: #fff3cd;
+  border-bottom: 1px solid #ffc107;
+  font-size: 0.875rem;
+  color: #664d03;
+  margin: -1rem -2rem 1rem;
+}
+
+.sync-banner button {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  background: #ffc107;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #000;
+}
+
+.sync-banner button:hover {
+  background: #e0a800;
+}
+
+.sync-banner--error {
+  background: #fde8e8;
+  border-bottom-color: #e05252;
+  color: #7f1d1d;
+}
+
+.sync-banner--error button {
+  background: #e05252;
+  color: #fff;
+}
+
+.sync-banner--error button:hover {
+  background: #c53030;
+}
+
+.sync-ok {
+  font-size: 0.75rem;
+  color: #aaa;
+  padding: 0 0 0.25rem;
+}
+
+/* ── Auth ── */
 
 .auth-gate {
   display: flex;
@@ -26,37 +80,293 @@ body {
   cursor: pointer;
 }
 
+/* ── Pinned panel ── */
+
+.pinned-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.pin-card {
+  border: 1px solid #d0e4f7;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  background: #f0f7ff;
+  min-width: 8rem;
+  max-width: 14rem;
+}
+
+.pin-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pin-card-text {
+  flex: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #222;
+  padding: 0;
+}
+
+.pin-card-text:hover {
+  text-decoration: underline;
+}
+
+.pin-unpin {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #f0a500;
+  font-size: 0.9rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.pin-card-location {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.pin-location-item::before {
+  content: '› ';
+}
+
+/* pin toggle on task row */
+
+.task-pin {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 0.85rem;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+  opacity: 0;
+}
+
+.task-row:hover .task-pin {
+  opacity: 1;
+}
+
+.task-pin--active {
+  color: #f0a500;
+  opacity: 1;
+}
+
+.task-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 1.1rem;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+  opacity: 0;
+}
+
+.task-row:hover .task-delete {
+  opacity: 1;
+}
+
+.task-delete:hover {
+  color: #e05252;
+}
+
+/* ── Breadcrumb ── */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  padding: 0.5rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.breadcrumb-link {
+  background: none;
+  border: none;
+  color: #4a90d9;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  color: #aaa;
+}
+
+.breadcrumb-current {
+  color: #333;
+  font-weight: 500;
+}
+
+/* ── Task tree ── */
+
 .task-tree {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .task-item {
   display: flex;
   flex-direction: column;
+  padding-top: 0.25rem;
 }
 
 .task-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.125rem 0;
+  gap: 0.25rem;
+  position: relative;
 }
+
+/* drag handle */
+
+.task-drag-handle {
+  cursor: grab;
+  color: #ccc;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  user-select: none;
+  opacity: 0;
+  line-height: 1;
+}
+
+.task-row:hover .task-drag-handle {
+  opacity: 1;
+}
+
+.task-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* drop indicators */
+
+.task-row.drop-before {
+  box-shadow: 0 -2px 0 0 #4a90d9;
+}
+
+.task-row.drop-after {
+  box-shadow: 0 2px 0 0 #4a90d9;
+}
+
+.task-row.drop-inside {
+  background: #e8f0fe;
+  border-radius: 3px;
+}
+
+.task-row--selected {
+  background: #dbeafe;
+  border-radius: 3px;
+}
+
+/* collapse toggle ▶/▼ */
+
+.task-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.6rem;
+  color: #aaa;
+  width: 1rem;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.task-toggle--hidden {
+  visibility: hidden;
+}
+
+.task-toggle:hover {
+  color: #555;
+}
+
+/* zoom bullet • */
+
+.task-bullet {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: #bbb;
+  width: 1rem;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.task-bullet:hover {
+  color: #4a90d9;
+}
+
+/* checkbox */
+
+.task-checkbox {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: #4a90d9;
+}
+
+/* task text */
 
 .task-text {
   flex: 1;
   outline: none;
-  min-height: 1.25em;
+  min-height: 1.5rem;
+  line-height: 1.5rem;
   border-radius: 2px;
-  padding: 1px 2px;
+  padding: 0 2px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .task-text:focus {
-  background: #f0f0ff;
+  background: #f0f4ff;
+}
+
+.task-text--empty::before {
+  content: attr(data-placeholder);
+  color: #ccc;
+  pointer-events: none;
+  position: absolute;
+}
+
+.task-text--checked {
+  color: #aaa;
+  text-decoration: line-through;
 }
 
 .task-children {
-  margin-left: 1.5rem;
+  margin-left: 2rem;
 }
+
+/* ── Controls (mobile bar) ── */
 
 .controls {
   position: fixed;
@@ -81,6 +391,8 @@ body {
   opacity: 0.4;
   cursor: default;
 }
+
+/* ── Sidebar ── */
 
 .sidebar {
   margin-top: 2rem;
