@@ -7,7 +7,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css|png|ico|webmanifest|woff2?))",
+      "source": "/(.*\\.(js|css|png|ico|webmanifest|woff2|woff))",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
