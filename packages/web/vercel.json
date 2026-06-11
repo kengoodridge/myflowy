@@ -1,0 +1,16 @@
+{
+  "headers": [
+    {
+      "source": "/(index\\.html|sw\\.js|workbox-.+\\.js|registerSW\\.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(.*\\.(js|css|png|ico|webmanifest|woff2?))",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}
