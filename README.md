@@ -20,6 +20,37 @@ The checkbox is taken from the [material design icons](http://google.github.io/m
 
 The button icons in the shortcuts bar for phone displays are taken from [the arrows collection in the noun project by Salvia Santos](https://thenounproject.com/Salvinorina-a/collection/arrows/), Creative Commons License.
 
+## Docker / Podman
+
+The web app builds into a static bundle served by nginx. The final image is
+~8 MB (nginx:alpine + assets).
+
+**Build** (offline-only — no Drive sync):
+
+```bash
+podman build -t myflowy-web .
+```
+
+**Build with Google Drive sync** (client ID baked in at build time):
+
+```bash
+podman build --build-arg VITE_GOOGLE_CLIENT_ID=<your-client-id> -t myflowy-web .
+```
+
+**Run** on port 5173 (matches the Google OAuth JavaScript origin):
+
+```bash
+podman run -d --name myflowy -p 5173:80 myflowy-web
+```
+
+Then open <http://localhost:5173>.
+
+**Stop / remove:**
+
+```bash
+podman stop myflowy && podman rm myflowy
+```
+
 ## Hacking
 
 ```

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/kengoodridge/.claude/skills/requesting-code-review/**)",
+      "Read(//Users/kengoodridge/.shared-skills/requesting-code-review/**)",
+      "Bash(npm view *)",
+      "Bash(yarn --version)",
+      "Bash(git -C /Users/kengoodridge/Development/play/myflowy ls-files packages/web/dist packages/web/tsconfig.tsbuildinfo)",
+      "Bash(git -C /Users/kengoodridge/Development/play/myflowy show HEAD:.env)",
+      "Bash(git -C /Users/kengoodridge/Development/play/myflowy show --stat 871643b)",
+      "Bash(yarn workspace *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(mkdir -p /Users/kengoodridge/Development/play/myflowy/packages/web/src/store /Users/kengoodridge/Development/play/myflowy/packages/web/src/hooks /Users/kengoodridge/Development/play/myflowy/packages/web/src/utils /Users/kengoodridge/Development/play/myflowy/packages/web/src/components /Users/kengoodridge/Development/play/myflowy/packages/web/src/styles)",
+      "Bash(node -e ' *)",
+      "Bash(npm run *)",
+      "Bash(podman --version)",
+      "Read(//usr/local/bin/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/kengoodridge/Development/play/myflowy/packages/web/src"
+    ]
+  }
+}

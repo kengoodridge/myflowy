@@ -2,9 +2,16 @@ import { getAccessToken } from '../auth';
 
 const BASE = 'https://www.googleapis.com';
 
+export class AuthError extends Error {
+  constructor() {
+    super('Drive API 401: access token expired or revoked');
+    this.name = 'AuthError';
+  }
+}
+
 function authHeader(): string {
   const token = getAccessToken();
-  if (!token) throw new Error('No access token set — call setAccessToken() first');
+  if (!token) throw new AuthError();
   return `Bearer ${token}`;
 }
 
@@ -13,6 +20,7 @@ function escapeDriveString(s: string): string {
 }
 
 async function checkOk(res: Response): Promise<void> {
+  if (res.status === 401) throw new AuthError();
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Drive API ${res.status}: ${body}`);
@@ -56,6 +64,20 @@ export async function findFile(name: string, parentId: string): Promise<string |
   await checkOk(res);
   const data = await res.json();
   return data.files?.[0]?.id ?? null;
+}
+
+export async function findFileGlobal(name: string): Promise<{ id: string; parentId: string | null } | null> {
+  const q = encodeURIComponent(
+    `name='${escapeDriveString(name)}' and trashed=false and mimeType!='application/vnd.google-apps.folder'`
+  );
+  const res = await fetch(`${BASE}/drive/v3/files?q=${q}&fields=files(id,parents)&orderBy=modifiedTime+desc`, {
+    headers: { Authorization: authHeader() },
+  });
+  await checkOk(res);
+  const data = await res.json();
+  const file = data.files?.[0];
+  if (!file) return null;
+  return { id: file.id, parentId: file.parents?.[0] ?? null };
 }
 
 export async function readFile(fileId: string): Promise<string> {
