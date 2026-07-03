@@ -419,6 +419,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
   };
 
   const handleTouchHandleStart = (e: React.TouchEvent<HTMLSpanElement>) => {
+    cancelPendingTouchDrag();
     if (!rowRef.current) return;
     const touch = e.touches[0];
     if (!touch) return;
