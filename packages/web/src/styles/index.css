@@ -282,8 +282,8 @@ body {
   opacity: 1;
 }
 
-body.touch-dragging,
-body.touch-dragging * {
+body.touch-dragging .task-tree,
+body.touch-dragging .task-tree * {
   user-select: none;
   -webkit-user-select: none;
 }
