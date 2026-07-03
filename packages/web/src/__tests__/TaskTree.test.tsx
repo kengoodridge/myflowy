@@ -150,7 +150,7 @@ describe('TaskTree', () => {
       configurable: true,
       value: elementFromPoint,
     });
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => rect);
+    const getBoundingClientRectMock = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => rect);
 
     render(
       <TaskTree
@@ -174,6 +174,6 @@ describe('TaskTree', () => {
 
     expect(store.moveTask).toHaveBeenCalledWith('a', 'root', 'b', 'root', 'inside');
 
-    rectSpy.mockRestore();
+    getBoundingClientRectMock.mockRestore();
   });
 });

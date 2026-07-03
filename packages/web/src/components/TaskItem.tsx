@@ -421,6 +421,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
   const handleTouchHandleStart = (e: React.TouchEvent<HTMLSpanElement>) => {
     if (!rowRef.current) return;
     const touch = e.touches[0];
+    if (!touch) return;
     e.preventDefault();
     e.stopPropagation();
     beginTouchDrag(touch.clientX, touch.clientY, rowRef.current);
