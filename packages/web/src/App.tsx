@@ -83,7 +83,6 @@ export function App() {
     if (!token) return;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     let syncInFlight = false;
-    let pendingReset = false;
     const runIdleResync = () => {
       if (syncInFlight) return;
       syncInFlight = true;
@@ -96,17 +95,11 @@ export function App() {
         })
         .finally(() => {
           syncInFlight = false;
-          if (pendingReset) {
-            pendingReset = false;
-            resetIdleTimer();
-          }
+          resetIdleTimer();
         });
     };
     const resetIdleTimer = () => {
-      if (syncInFlight) {
-        pendingReset = true;
-        return;
-      }
+      if (syncInFlight) return;
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(runIdleResync, IDLE_RESYNC_MS);
     };
