@@ -45,6 +45,7 @@ In the Vercel dashboard → Project → Settings → Environment Variables, add:
 | Name                   | Value                        | Environment        |
 |------------------------|------------------------------|--------------------|
 | `VITE_GOOGLE_CLIENT_ID`| `<your OAuth client ID>`     | Production, Preview |
+| `VITE_IDLE_RESYNC_MS`  | `60000` (optional)           | Production, Preview |
 
 Vite bakes this value into the JS bundle at build time, so it must be set before
 the build runs (not at runtime).

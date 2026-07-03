@@ -12,6 +12,7 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { PinnedPanel } from './components/PinnedPanel';
 import { Controls } from './components/Controls';
 import { Sidebar } from './components/Sidebar';
+import { getIdleResyncMs } from './config';
 import './styles/index.css';
 
 const STORAGE_KEY = 'myflowy_access_token';
@@ -19,6 +20,13 @@ const STORAGE_KEY = 'myflowy_access_token';
 const localStore = new IDBLocalStore();
 const engine = new SyncEngine(localStore);
 const taskStore = new TaskStore(engine);
+const IDLE_RESYNC_MS = getIdleResyncMs();
+const IDLE_ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
+  'mousedown',
+  'keydown',
+  'touchstart',
+  'focus',
+];
 
 type SyncState =
   | { status: 'idle' }
@@ -70,6 +78,49 @@ export function App() {
       taskStore.removeEventListener('sync-complete', handleSyncComplete);
     };
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let syncInFlight = false;
+    let pendingReset = false;
+    const runIdleResync = () => {
+      if (syncInFlight) return;
+      syncInFlight = true;
+      idleTimer = null;
+      taskStore.syncFromDrive()
+        .then(() => setSyncState({ status: 'synced', at: new Date() }))
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : String(err);
+          setSyncState({ status: 'error', message });
+        })
+        .finally(() => {
+          syncInFlight = false;
+          if (pendingReset) {
+            pendingReset = false;
+            resetIdleTimer();
+          }
+        });
+    };
+    const resetIdleTimer = () => {
+      if (syncInFlight) {
+        pendingReset = true;
+        return;
+      }
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(runIdleResync, IDLE_RESYNC_MS);
+    };
+    for (const eventName of IDLE_ACTIVITY_EVENTS) {
+      window.addEventListener(eventName, resetIdleTimer);
+    }
+    resetIdleTimer();
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      for (const eventName of IDLE_ACTIVITY_EVENTS) {
+        window.removeEventListener(eventName, resetIdleTimer);
+      }
+    };
+  }, [token]);
 
   const handleReconnect = useCallback((newToken: string) => {
     localStorage.setItem(STORAGE_KEY, newToken);

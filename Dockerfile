@@ -17,8 +17,11 @@ COPY packages/web  ./packages/web
 # VITE_GOOGLE_CLIENT_ID is baked in at build time.
 # Pass it with: --build-arg VITE_GOOGLE_CLIENT_ID=<your-id>
 # Omit it to build an offline-only image (no Drive sync).
+# Optional: override idle resync timer with --build-arg VITE_IDLE_RESYNC_MS=<milliseconds>
 ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ARG VITE_IDLE_RESYNC_MS=60000
+ENV VITE_IDLE_RESYNC_MS=$VITE_IDLE_RESYNC_MS
 
 RUN yarn build:core && yarn build:web
 
