@@ -284,6 +284,13 @@ body {
   cursor: grabbing;
 }
 
+/* On touch devices show the drag handle at all times as a visual affordance */
+@media (hover: none) {
+  .task-drag-handle {
+    opacity: 0.4;
+  }
+}
+
 /* drop indicators */
 
 .task-row.drop-before {
