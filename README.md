@@ -37,6 +37,12 @@ podman build -t myflowy-web .
 podman build --build-arg VITE_GOOGLE_CLIENT_ID=<your-client-id> -t myflowy-web .
 ```
 
+Optional idle resync override (default is 1 minute / 60000 ms):
+
+```bash
+podman build --build-arg VITE_GOOGLE_CLIENT_ID=<your-client-id> --build-arg VITE_IDLE_RESYNC_MS=120000 -t myflowy-web .
+```
+
 **Run** on port 5173 (matches the Google OAuth JavaScript origin):
 
 ```bash
