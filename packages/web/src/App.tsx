@@ -87,7 +87,7 @@ export function App() {
       if (syncInFlight) return;
       syncInFlight = true;
       idleTimer = null;
-      taskStore.syncFromDrive()
+      taskStore.sync()
         .then(() => setSyncState({ status: 'synced', at: new Date() }))
         .catch((err) => {
           const message = err instanceof Error ? err.message : String(err);
