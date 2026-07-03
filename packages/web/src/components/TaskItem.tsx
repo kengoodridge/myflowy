@@ -57,6 +57,7 @@ function clearTouchDragGhost() {
     activeTouchDrag.ghost.remove();
     activeTouchDrag.ghost = null;
   }
+  document.body.classList.remove('touch-dragging');
 }
 
 function cancelPendingTouchDrag() {
@@ -297,6 +298,33 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
     }
   };
 
+  const beginTouchDrag = (clientX: number, clientY: number, rowEl: HTMLDivElement) => {
+    cancelPendingTouchDrag();
+    clearTouchDragGhost();
+    clearTouchDragTarget();
+
+    const rect = rowEl.getBoundingClientRect();
+    activeTouchDrag.dragId = id;
+    activeTouchDrag.dragParentId = parentId;
+    activeTouchDrag.offsetX = clientX - rect.left;
+    activeTouchDrag.offsetY = clientY - rect.top;
+
+    const ghost = rowEl.cloneNode(true) as HTMLElement;
+    ghost.style.position = 'fixed';
+    ghost.style.left = `${rect.left}px`;
+    ghost.style.top = `${rect.top}px`;
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.opacity = '0.7';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '9999';
+    ghost.style.background = 'var(--task-ghost-bg, #fff)';
+    ghost.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    ghost.style.borderRadius = '4px';
+    document.body.appendChild(ghost);
+    document.body.classList.add('touch-dragging');
+    activeTouchDrag.ghost = ghost;
+  };
+
   const handleDragStart = (e: React.DragEvent) => {
     // Prevent dragging when the user starts from the contentEditable text area
     if ((e.target as HTMLElement).isContentEditable) {
@@ -386,21 +414,18 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
       activeTouchDrag.pendingParentId = null;
 
       // Create a floating ghost copy of the row for visual feedback
-      const currentRect = rowEl.getBoundingClientRect();
-      const ghost = rowEl.cloneNode(true) as HTMLElement;
-      ghost.style.position = 'fixed';
-      ghost.style.left = `${currentRect.left}px`;
-      ghost.style.top = `${currentRect.top}px`;
-      ghost.style.width = `${currentRect.width}px`;
-      ghost.style.opacity = '0.7';
-      ghost.style.pointerEvents = 'none';
-      ghost.style.zIndex = '9999';
-      ghost.style.background = 'var(--task-ghost-bg, #fff)';
-      ghost.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-      ghost.style.borderRadius = '4px';
-      document.body.appendChild(ghost);
-      activeTouchDrag.ghost = ghost;
+      beginTouchDrag(touch.clientX, touch.clientY, rowEl);
     }, 250);
+  };
+
+  const handleTouchHandleStart = (e: React.TouchEvent<HTMLSpanElement>) => {
+    cancelPendingTouchDrag();
+    if (!rowRef.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    e.preventDefault();
+    e.stopPropagation();
+    beginTouchDrag(touch.clientX, touch.clientY, rowRef.current);
   };
 
   const handleTouchEnd = () => {
@@ -567,6 +592,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
         <span
           className="task-drag-handle"
           title="Drag to reorder"
+          onTouchStart={handleTouchHandleStart}
         >
           ⠿
         </span>
