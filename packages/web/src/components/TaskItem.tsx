@@ -7,6 +7,7 @@ type DropPos = 'before' | 'after' | 'inside';
 
 // Module-level state shared across all TaskItem instances (only one touch drag at a time)
 interface TouchDragState {
+  // Active drag (threshold/delay already met)
   dragId: string | null;
   dragParentId: string | null;
   ghost: HTMLElement | null;
@@ -16,6 +17,12 @@ interface TouchDragState {
   targetParentId: string | null;
   offsetX: number;
   offsetY: number;
+  // Pending drag (touchstart recorded, waiting for delay before committing)
+  pendingId: string | null;
+  pendingParentId: string | null;
+  startX: number;
+  startY: number;
+  longPressTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const activeTouchDrag: TouchDragState = {
@@ -28,6 +35,11 @@ const activeTouchDrag: TouchDragState = {
   targetParentId: null,
   offsetX: 0,
   offsetY: 0,
+  pendingId: null,
+  pendingParentId: null,
+  startX: 0,
+  startY: 0,
+  longPressTimer: null,
 };
 
 function clearTouchDragTarget() {
@@ -45,6 +57,15 @@ function clearTouchDragGhost() {
     activeTouchDrag.ghost.remove();
     activeTouchDrag.ghost = null;
   }
+}
+
+function cancelPendingTouchDrag() {
+  if (activeTouchDrag.longPressTimer) {
+    clearTimeout(activeTouchDrag.longPressTimer);
+    activeTouchDrag.longPressTimer = null;
+  }
+  activeTouchDrag.pendingId = null;
+  activeTouchDrag.pendingParentId = null;
 }
 
 type ParsedLine = { level: number; text: string };
@@ -186,16 +207,31 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
     }
   }, [focusId, id]);
 
-  // Non-passive touchmove handler so we can call preventDefault to suppress scrolling during drag
+  // Non-passive touchmove handler so we can call preventDefault to suppress scrolling during drag.
+  // Also handles the drag-initiation threshold: if the user moves before the long-press timer fires,
+  // the pending drag is cancelled so native scrolling is uninterrupted.
   useEffect(() => {
     const el = rowRef.current;
     if (!el) return;
 
+    const MOVE_CANCEL_THRESHOLD = 8; // px — cancel pending drag if finger moves this far first
+
     const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+
+      // Pending phase: long-press timer hasn't fired yet; cancel drag if user moved too far
+      if (activeTouchDrag.pendingId === id && activeTouchDrag.dragId !== id) {
+        const dx = touch.clientX - activeTouchDrag.startX;
+        const dy = touch.clientY - activeTouchDrag.startY;
+        if (Math.sqrt(dx * dx + dy * dy) > MOVE_CANCEL_THRESHOLD) {
+          cancelPendingTouchDrag();
+        }
+        return; // don't preventDefault — let the browser scroll
+      }
+
+      // Active drag phase
       if (activeTouchDrag.dragId !== id) return;
       e.preventDefault();
-
-      const touch = e.touches[0];
 
       if (activeTouchDrag.ghost) {
         activeTouchDrag.ghost.style.left = `${touch.clientX - activeTouchDrag.offsetX}px`;
@@ -235,13 +271,15 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
       }
     };
 
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    const opts = { passive: false } as AddEventListenerOptions;
+    el.addEventListener('touchmove', onTouchMove, opts);
     return () => {
-      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchmove', onTouchMove, opts);
       // Clean up if this component unmounts during an active drag
-      if (activeTouchDrag.dragId === id) {
+      if (activeTouchDrag.dragId === id || activeTouchDrag.pendingId === id) {
         clearTouchDragGhost();
         clearTouchDragTarget();
+        cancelPendingTouchDrag();
         activeTouchDrag.dragId = null;
         activeTouchDrag.dragParentId = null;
       }
@@ -329,28 +367,45 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();
 
-    activeTouchDrag.dragId = id;
-    activeTouchDrag.dragParentId = parentId;
+    // Record pending drag; the actual drag starts after a short delay (long-press).
+    // This lets the user scroll without accidentally triggering a drag.
+    activeTouchDrag.pendingId = id;
+    activeTouchDrag.pendingParentId = parentId;
+    activeTouchDrag.startX = touch.clientX;
+    activeTouchDrag.startY = touch.clientY;
     activeTouchDrag.offsetX = touch.clientX - rect.left;
     activeTouchDrag.offsetY = touch.clientY - rect.top;
 
-    // Create a floating ghost copy of the row for visual feedback
-    const ghost = e.currentTarget.cloneNode(true) as HTMLElement;
-    ghost.style.position = 'fixed';
-    ghost.style.left = `${rect.left}px`;
-    ghost.style.top = `${rect.top}px`;
-    ghost.style.width = `${rect.width}px`;
-    ghost.style.opacity = '0.7';
-    ghost.style.pointerEvents = 'none';
-    ghost.style.zIndex = '9999';
-    ghost.style.background = '#fff';
-    ghost.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-    ghost.style.borderRadius = '4px';
-    document.body.appendChild(ghost);
-    activeTouchDrag.ghost = ghost;
+    const rowEl = e.currentTarget;
+    activeTouchDrag.longPressTimer = setTimeout(() => {
+      if (activeTouchDrag.pendingId !== id) return;
+      activeTouchDrag.longPressTimer = null;
+      activeTouchDrag.dragId = id;
+      activeTouchDrag.dragParentId = activeTouchDrag.pendingParentId;
+      activeTouchDrag.pendingId = null;
+      activeTouchDrag.pendingParentId = null;
+
+      // Create a floating ghost copy of the row for visual feedback
+      const currentRect = rowEl.getBoundingClientRect();
+      const ghost = rowEl.cloneNode(true) as HTMLElement;
+      ghost.style.position = 'fixed';
+      ghost.style.left = `${currentRect.left}px`;
+      ghost.style.top = `${currentRect.top}px`;
+      ghost.style.width = `${currentRect.width}px`;
+      ghost.style.opacity = '0.7';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.zIndex = '9999';
+      ghost.style.background = 'var(--task-ghost-bg, #fff)';
+      ghost.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+      ghost.style.borderRadius = '4px';
+      document.body.appendChild(ghost);
+      activeTouchDrag.ghost = ghost;
+    }, 250);
   };
 
   const handleTouchEnd = () => {
+    cancelPendingTouchDrag();
+
     const { dragId, dragParentId, dropPos: touchDropPos, targetId, targetParentId } = activeTouchDrag;
 
     clearTouchDragGhost();
@@ -366,6 +421,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
   };
 
   const handleTouchCancel = () => {
+    cancelPendingTouchDrag();
     clearTouchDragGhost();
     clearTouchDragTarget();
     activeTouchDrag.dragId = null;
