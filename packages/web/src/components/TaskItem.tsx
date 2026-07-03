@@ -255,14 +255,8 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
         const rowRect = targetRow.getBoundingClientRect();
         const y = touch.clientY - rowRect.top;
         const pct = y / rowRect.height;
-        const hasTargetChildren = targetRow.dataset.hasChildren === 'true';
 
-        let pos: DropPos;
-        if (!hasTargetChildren) {
-          pos = pct < 0.5 ? 'before' : 'after';
-        } else {
-          pos = pct < 0.25 ? 'before' : pct > 0.75 ? 'after' : 'inside';
-        }
+        const pos: DropPos = pct < 0.25 ? 'before' : pct > 0.75 ? 'after' : 'inside';
 
         targetRow.classList.add(`drop-${pos}`);
         activeTouchDrag.targetRow = targetRow;
@@ -344,12 +338,7 @@ export function TaskItem({ id, parentId, tasks, store, depth, focusId, onFocusRe
     const y = e.clientY - rect.top;
     const pct = y / rect.height;
 
-    let pos: DropPos;
-    if (!hasChildren) {
-      pos = pct < 0.5 ? 'before' : 'after';
-    } else {
-      pos = pct < 0.25 ? 'before' : pct > 0.75 ? 'after' : 'inside';
-    }
+    const pos: DropPos = pct < 0.25 ? 'before' : pct > 0.75 ? 'after' : 'inside';
     setDropPos(pos);
 
     if (pos === 'inside' && task.collapsed) {

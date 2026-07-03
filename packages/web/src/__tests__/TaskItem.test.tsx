@@ -187,4 +187,29 @@ describe('TaskItem', () => {
       expect(onFocusRequest).toHaveBeenCalledWith('b');
     });
   });
+
+  describe('drag and drop', () => {
+    it('calls store.moveTask with inside when dragged onto the middle of a childless task', () => {
+      const tasks = makeMap({ root: { children: ['a', 'b'] }, a: {}, b: {} });
+      const store = makeStore({ moveTask: vi.fn() });
+      renderItem(tasks, 'b', 'root', { store });
+
+      const row = document.querySelector('[data-task-id="b"]') as HTMLElement;
+
+      // Simulate dragging 'a' over the middle of 'b' (pct ~0.5 → inside)
+      Object.defineProperty(row, 'getBoundingClientRect', {
+        value: () => ({ top: 0, height: 40, left: 0, width: 200, bottom: 40, right: 200 }),
+        configurable: true,
+      });
+
+      fireEvent.dragOver(row, { clientY: 20 }); // 20/40 = 50% → inside
+      fireEvent.drop(row, {
+        dataTransfer: {
+          getData: (key: string) => (key === 'taskId' ? 'a' : 'root'),
+        },
+      });
+
+      expect(store.moveTask).toHaveBeenCalledWith('a', 'root', 'b', 'root', 'inside');
+    });
+  });
 });
