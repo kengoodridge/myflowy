@@ -32,11 +32,28 @@ export class TaskStore extends EventTarget {
         this.emit();
       }
     } catch (err) {
-      if (err instanceof AuthError) {
-        this.dispatchEvent(new Event('auth-error'));
-      } else {
-        throw err;
+      this.handleSyncError(err);
+    }
+  }
+
+  async sync(): Promise<void> {
+    try {
+      const remote = await this.engine.syncFromDrive();
+      if (remote) {
+        this.tasks = remote;
+        this.emit();
       }
+      await this.engine.flushToDrive();
+    } catch (err) {
+      this.handleSyncError(err);
+    }
+  }
+
+  private handleSyncError(err: unknown): void {
+    if (err instanceof AuthError) {
+      this.dispatchEvent(new Event('auth-error'));
+    } else {
+      throw err;
     }
   }
 
