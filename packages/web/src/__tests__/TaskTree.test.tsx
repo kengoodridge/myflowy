@@ -145,7 +145,11 @@ describe('TaskTree', () => {
     });
     const store = makeStore();
 
-    const elementFromPoint = vi.spyOn(document, 'elementFromPoint');
+    const elementFromPoint = vi.fn();
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: elementFromPoint,
+    });
     const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => rect);
 
     render(
@@ -170,7 +174,6 @@ describe('TaskTree', () => {
 
     expect(store.moveTask).toHaveBeenCalledWith('a', 'root', 'b', 'root', 'inside');
 
-    elementFromPoint.mockRestore();
     rectSpy.mockRestore();
   });
 });
