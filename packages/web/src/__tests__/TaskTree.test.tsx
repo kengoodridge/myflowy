@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { TaskTree } from '../components/TaskTree';
 import type { TaskMap } from '@myflowy/core';
 import type { TaskStore } from '../store/TaskStore';
@@ -80,5 +80,46 @@ describe('TaskTree', () => {
       />
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it('renders a first-subtask action for empty roots', () => {
+    const tasks = makeMap({
+      root: { text: 'Parent', children: [] },
+    });
+
+    render(
+      <TaskTree
+        rootId="root"
+        tasks={tasks}
+        store={makeStore()}
+        focusId={null}
+        onFocusRequest={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Add first subtask' })).toBeInTheDocument();
+  });
+
+  it('adds and focuses the first subtask when the empty action is pressed', () => {
+    const tasks = makeMap({
+      root: { text: 'Parent', children: [] },
+    });
+    const store = makeStore();
+    const onFocusRequest = vi.fn();
+
+    render(
+      <TaskTree
+        rootId="root"
+        tasks={tasks}
+        store={store}
+        focusId={null}
+        onFocusRequest={onFocusRequest}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add first subtask' }));
+
+    expect(store.addTask).toHaveBeenCalledWith('root', null);
+    expect(onFocusRequest).toHaveBeenCalledWith('new-id');
   });
 });

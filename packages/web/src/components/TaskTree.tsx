@@ -17,9 +17,22 @@ export interface TaskTreeProps {
 export function TaskTree({ rootId, tasks, store, focusId, onFocusRequest, onZoom, selectedIds, onRowEnter }: TaskTreeProps) {
   const root = tasks[rootId];
   if (!root) return null;
+  const isEmpty = root.children.length === 0;
 
   return (
     <div className="task-tree">
+      {isEmpty && (
+        <button
+          className="task-tree-empty"
+          onClick={() => {
+            const newId = store.addTask(rootId, null);
+            onFocusRequest(newId);
+          }}
+          type="button"
+        >
+          Add first subtask
+        </button>
+      )}
       {root.children.map((childId) => (
         <TaskItem
           key={childId}

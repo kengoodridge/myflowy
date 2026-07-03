@@ -231,6 +231,26 @@ body {
   margin-top: 0.5rem;
 }
 
+.task-tree-empty {
+  width: 100%;
+  min-height: 6rem;
+  padding: 1rem;
+  border: 1px dashed #d0d7e2;
+  border-radius: 0.75rem;
+  background: #f8fbff;
+  color: #4a90d9;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-tree-empty:hover,
+.task-tree-empty:focus {
+  border-color: #4a90d9;
+  background: #f0f4ff;
+  outline: none;
+}
+
 .task-item {
   display: flex;
   flex-direction: column;
