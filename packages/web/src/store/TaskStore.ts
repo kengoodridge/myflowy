@@ -32,11 +32,7 @@ export class TaskStore extends EventTarget {
         this.emit();
       }
     } catch (err) {
-      if (err instanceof AuthError) {
-        this.dispatchEvent(new Event('auth-error'));
-      } else {
-        throw err;
-      }
+      this.handleSyncError(err);
     }
   }
 
@@ -49,11 +45,15 @@ export class TaskStore extends EventTarget {
       }
       await this.engine.flushToDrive();
     } catch (err) {
-      if (err instanceof AuthError) {
-        this.dispatchEvent(new Event('auth-error'));
-      } else {
-        throw err;
-      }
+      this.handleSyncError(err);
+    }
+  }
+
+  private handleSyncError(err: unknown): void {
+    if (err instanceof AuthError) {
+      this.dispatchEvent(new Event('auth-error'));
+    } else {
+      throw err;
     }
   }
 
