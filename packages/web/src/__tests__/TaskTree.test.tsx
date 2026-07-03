@@ -16,6 +16,7 @@ function makeStore(): TaskStore {
   return {
     addTask: vi.fn().mockReturnValue('new-id'),
     removeTask: vi.fn(),
+    moveTask: vi.fn(),
     updateTask: vi.fn(),
     indentTask: vi.fn(),
     outdentTask: vi.fn(),
@@ -31,6 +32,18 @@ function makeStore(): TaskStore {
 }
 
 describe('TaskTree', () => {
+  const rect = {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    bottom: 100,
+    right: 100,
+    width: 100,
+    height: 100,
+    toJSON: () => ({}),
+  } as DOMRect;
+
   it('renders each top-level task', () => {
     const tasks = makeMap({
       root: { children: ['a', 'b'] },
@@ -121,5 +134,43 @@ describe('TaskTree', () => {
 
     expect(store.addTask).toHaveBeenCalledWith('root', null);
     expect(onFocusRequest).toHaveBeenCalledWith('new-id');
+  });
+
+  it('moves a task inside another task via touch drag on the handle', () => {
+    const tasks = makeMap({
+      root: { children: ['a', 'b'] },
+      a: { text: 'Alpha' },
+      b: { text: 'Beta', children: ['c'] },
+      c: { text: 'Child' },
+    });
+    const store = makeStore();
+
+    const elementFromPoint = vi.spyOn(document, 'elementFromPoint');
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => rect);
+
+    render(
+      <TaskTree
+        rootId="root"
+        tasks={tasks}
+        store={store}
+        focusId={null}
+        onFocusRequest={vi.fn()}
+      />
+    );
+
+    const [sourceHandle] = screen.getAllByTitle('Drag to reorder');
+    const rows = document.querySelectorAll('.task-row');
+    const sourceRow = rows[0] as HTMLElement;
+    const targetRow = rows[1] as HTMLElement;
+    elementFromPoint.mockReturnValue(targetRow);
+
+    fireEvent.touchStart(sourceHandle, { touches: [{ clientX: 10, clientY: 10 }] });
+    fireEvent.touchMove(sourceRow, { touches: [{ clientX: 50, clientY: 50 }] });
+    fireEvent.touchEnd(sourceRow);
+
+    expect(store.moveTask).toHaveBeenCalledWith('a', 'root', 'b', 'root', 'inside');
+
+    elementFromPoint.mockRestore();
+    rectSpy.mockRestore();
   });
 });
