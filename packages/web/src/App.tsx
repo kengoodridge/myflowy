@@ -21,6 +21,12 @@ const localStore = new IDBLocalStore();
 const engine = new SyncEngine(localStore);
 const taskStore = new TaskStore(engine);
 const IDLE_RESYNC_MS = getIdleResyncMs();
+const IDLE_ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
+  'mousedown',
+  'keydown',
+  'touchstart',
+  'focus',
+];
 
 type SyncState =
   | { status: 'idle' }
@@ -76,7 +82,12 @@ export function App() {
   useEffect(() => {
     if (!token) return;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let syncInFlight = false;
+    let pendingReset = false;
     const runIdleResync = () => {
+      if (syncInFlight) return;
+      syncInFlight = true;
+      idleTimer = null;
       taskStore.syncFromDrive()
         .then(() => setSyncState({ status: 'synced', at: new Date() }))
         .catch((err) => {
@@ -84,27 +95,28 @@ export function App() {
           setSyncState({ status: 'error', message });
         })
         .finally(() => {
-          idleTimer = setTimeout(runIdleResync, IDLE_RESYNC_MS);
+          syncInFlight = false;
+          if (pendingReset) {
+            pendingReset = false;
+            resetIdleTimer();
+          }
         });
     };
     const resetIdleTimer = () => {
+      if (syncInFlight) {
+        pendingReset = true;
+        return;
+      }
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(runIdleResync, IDLE_RESYNC_MS);
     };
-    const events: Array<keyof WindowEventMap> = [
-      'mousemove',
-      'mousedown',
-      'keydown',
-      'touchstart',
-      'scroll',
-    ];
-    for (const eventName of events) {
+    for (const eventName of IDLE_ACTIVITY_EVENTS) {
       window.addEventListener(eventName, resetIdleTimer);
     }
     resetIdleTimer();
     return () => {
       if (idleTimer) clearTimeout(idleTimer);
-      for (const eventName of events) {
+      for (const eventName of IDLE_ACTIVITY_EVENTS) {
         window.removeEventListener(eventName, resetIdleTimer);
       }
     };
