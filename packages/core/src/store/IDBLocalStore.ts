@@ -1,9 +1,10 @@
 import { get, set, del, keys, entries, delMany, setMany } from 'idb-keyval';
-import type { Task, TaskMap, LocalStore } from '../types';
+import type { Task, TaskMap, TombstoneMap, LocalStore } from '../types';
 
 const PENDING_KEY = '__pending__';
 const SYNCED_AT_KEY = '__synced_at__';
-const META_KEYS = new Set([PENDING_KEY, SYNCED_AT_KEY]);
+const TOMBSTONES_KEY = '__tombstones__';
+const META_KEYS = new Set([PENDING_KEY, SYNCED_AT_KEY, TOMBSTONES_KEY]);
 
 export class IDBLocalStore implements LocalStore {
   async get(id: string): Promise<Task | undefined> {
@@ -16,6 +17,8 @@ export class IDBLocalStore implements LocalStore {
 
   async remove(id: string): Promise<void> {
     await del(id);
+    const tombstones = await this.getTombstones();
+    await this.setTombstones({ ...tombstones, [id]: new Date().toISOString() });
   }
 
   async getAll(): Promise<TaskMap> {
@@ -33,6 +36,14 @@ export class IDBLocalStore implements LocalStore {
     if (taskKeys.length > 0) await delMany(taskKeys);
     const entries = Object.entries(tasks) as [string, Task][];
     if (entries.length > 0) await setMany(entries);
+  }
+
+  async getTombstones(): Promise<TombstoneMap> {
+    return (await get<TombstoneMap>(TOMBSTONES_KEY)) ?? {};
+  }
+
+  async setTombstones(tombstones: TombstoneMap): Promise<void> {
+    await set(TOMBSTONES_KEY, tombstones);
   }
 
   async getPendingUpload(): Promise<boolean> {
