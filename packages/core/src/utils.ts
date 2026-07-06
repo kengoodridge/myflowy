@@ -12,5 +12,6 @@ export function initialRoot(): Task {
     pinned: false,
     collapsed: false,
     children: [],
+    updatedAt: new Date().toISOString(),
   };
 }

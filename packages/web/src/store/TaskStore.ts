@@ -91,17 +91,24 @@ export class TaskStore extends EventTarget {
     }
     for (const [id, task] of Object.entries(prev)) {
       if (!before[id] || before[id] !== task) {
-        this.engine.setTask(task).catch(console.error);
+        // Re-apply as a fresh edit so it wins a Drive merge against any
+        // change another client made while this was on the undo stack.
+        this.engine.setTask(this.touch(task)).catch(console.error);
       }
     }
   }
 
   // --- mutations ---
 
+  private touch(task: Task): Task {
+    return { ...task, updatedAt: new Date().toISOString() };
+  }
+
   updateTask(task: Task): void {
-    this.tasks = { ...this.tasks, [task.id]: task };
+    const stamped = this.touch(task);
+    this.tasks = { ...this.tasks, [task.id]: stamped };
     this.emit();
-    this.engine.setTask(task).catch(console.error);
+    this.engine.setTask(stamped).catch(console.error);
   }
 
   addTask(parentId: string, afterId: string | null): string {
@@ -114,6 +121,7 @@ export class TaskStore extends EventTarget {
       pinned: false,
       collapsed: false,
       children: [],
+      updatedAt: new Date().toISOString(),
     };
     const parent = this.tasks[parentId];
     const children = [...parent.children];
@@ -123,7 +131,7 @@ export class TaskStore extends EventTarget {
       const afterIndex = children.indexOf(afterId);
       children.splice(afterIndex + 1, 0, id);
     }
-    const updatedParent = { ...parent, children };
+    const updatedParent = this.touch({ ...parent, children });
     this.tasks = { ...this.tasks, [id]: newTask, [parentId]: updatedParent };
     this.emit();
     this.engine.setTask(newTask).catch(console.error);
@@ -134,7 +142,7 @@ export class TaskStore extends EventTarget {
   removeTask(id: string, parentId: string): void {
     this.pushUndo();
     const parent = this.tasks[parentId];
-    const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
+    const updatedParent = this.touch({ ...parent, children: parent.children.filter((c) => c !== id) });
     const { [id]: _removed, ...rest } = this.tasks;
     this.tasks = { ...rest, [parentId]: updatedParent };
     this.emit();
@@ -151,12 +159,12 @@ export class TaskStore extends EventTarget {
   ): void {
     this.pushUndo();
     const oldParent = this.tasks[dragParentId];
-    const updatedOldParent = { ...oldParent, children: oldParent.children.filter((c) => c !== dragId) };
+    const updatedOldParent = this.touch({ ...oldParent, children: oldParent.children.filter((c) => c !== dragId) });
     let tasks = { ...this.tasks, [dragParentId]: updatedOldParent };
 
     if (position === 'inside') {
       const target = tasks[targetId];
-      const updatedTarget = { ...target, children: [...target.children, dragId], collapsed: false };
+      const updatedTarget = this.touch({ ...target, children: [...target.children, dragId], collapsed: false });
       tasks = { ...tasks, [targetId]: updatedTarget };
       this.engine.setTask(updatedTarget).catch(console.error);
     } else {
@@ -164,7 +172,7 @@ export class TaskStore extends EventTarget {
       const children = [...targetParent.children];
       const targetIdx = children.indexOf(targetId);
       children.splice(position === 'before' ? targetIdx : targetIdx + 1, 0, dragId);
-      const updatedTargetParent = { ...targetParent, children };
+      const updatedTargetParent = this.touch({ ...targetParent, children });
       tasks = { ...tasks, [targetParentId]: updatedTargetParent };
       this.engine.setTask(updatedTargetParent).catch(console.error);
     }
@@ -178,7 +186,7 @@ export class TaskStore extends EventTarget {
     this.pushUndo();
     const descendants = this.collectDescendants(id);
     const parent = this.tasks[parentId];
-    const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
+    const updatedParent = this.touch({ ...parent, children: parent.children.filter((c) => c !== id) });
     let newTasks: typeof this.tasks = { ...this.tasks, [parentId]: updatedParent };
     for (const descId of descendants) {
       const { [descId]: _, ...rest } = newTasks;
@@ -210,8 +218,8 @@ export class TaskStore extends EventTarget {
     if (idx === 0) return;
     const newParentId = parent.children[idx - 1];
     const newParent = this.tasks[newParentId];
-    const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
-    const updatedNewParent = { ...newParent, children: [...newParent.children, id] };
+    const updatedParent = this.touch({ ...parent, children: parent.children.filter((c) => c !== id) });
+    const updatedNewParent = this.touch({ ...newParent, children: [...newParent.children, id] });
     this.tasks = { ...this.tasks, [parentId]: updatedParent, [newParentId]: updatedNewParent };
     this.emit();
     this.engine.setTask(updatedParent).catch(console.error);
@@ -223,10 +231,10 @@ export class TaskStore extends EventTarget {
     const parent = this.tasks[parentId];
     const grandparent = this.tasks[grandparentId];
     const parentIdx = grandparent.children.indexOf(parentId);
-    const updatedParent = { ...parent, children: parent.children.filter((c) => c !== id) };
+    const updatedParent = this.touch({ ...parent, children: parent.children.filter((c) => c !== id) });
     const gpChildren = [...grandparent.children];
     gpChildren.splice(parentIdx + 1, 0, id);
-    const updatedGrandparent = { ...grandparent, children: gpChildren };
+    const updatedGrandparent = this.touch({ ...grandparent, children: gpChildren });
     this.tasks = { ...this.tasks, [parentId]: updatedParent, [grandparentId]: updatedGrandparent };
     this.emit();
     this.engine.setTask(updatedParent).catch(console.error);
@@ -240,7 +248,7 @@ export class TaskStore extends EventTarget {
     if (idx === 0) return;
     const children = [...parent.children];
     [children[idx - 1], children[idx]] = [children[idx], children[idx - 1]];
-    const updatedParent = { ...parent, children };
+    const updatedParent = this.touch({ ...parent, children });
     this.tasks = { ...this.tasks, [parentId]: updatedParent };
     this.emit();
     this.engine.setTask(updatedParent).catch(console.error);
@@ -253,7 +261,7 @@ export class TaskStore extends EventTarget {
     if (idx === parent.children.length - 1) return;
     const children = [...parent.children];
     [children[idx], children[idx + 1]] = [children[idx + 1], children[idx]];
-    const updatedParent = { ...parent, children };
+    const updatedParent = this.touch({ ...parent, children });
     this.tasks = { ...this.tasks, [parentId]: updatedParent };
     this.emit();
     this.engine.setTask(updatedParent).catch(console.error);

@@ -1,7 +1,20 @@
-import type { Task, TaskMap, LocalStore } from './types';
+import type { Task, TaskMap, TombstoneMap, LocalStore, DriveFile } from './types';
 import { DriveSync } from './drive/DriveSync';
 import { AuthError } from './drive/driveApi';
 import { initialRoot } from './utils';
+import { mergeTaskState, isSameTaskMap } from './merge';
+
+// Legacy per-task data (written before per-task timestamps existed) has no
+// updatedAt — treat it as the oldest possible edit so any real edit wins.
+const EPOCH = '1970-01-01T00:00:00.000Z';
+
+function normalizeTasks(tasks: TaskMap): TaskMap {
+  const result: TaskMap = {};
+  for (const [id, task] of Object.entries(tasks)) {
+    result[id] = task.updatedAt ? task : { ...task, updatedAt: EPOCH };
+  }
+  return result;
+}
 
 export class SyncEngine {
   private store: LocalStore;
@@ -31,7 +44,7 @@ export class SyncEngine {
       await this.store.set(root);
       return { root };
     }
-    return tasks;
+    return normalizeTasks(tasks);
   }
 
   async getTask(id: string): Promise<Task | undefined> {
@@ -48,33 +61,53 @@ export class SyncEngine {
     this.scheduleDriveUpload();
   }
 
-  async syncFromDrive(): Promise<TaskMap | null> {
+  /**
+   * Reads whatever is on Drive and merges it with local state on a per-task,
+   * last-write-wins basis (see mergeTaskState) instead of comparing a single
+   * file-level timestamp — that used to let one client's whole snapshot
+   * silently overwrite another client's concurrent edits.
+   */
+  private async mergeWithRemote(): Promise<{
+    tasks: TaskMap;
+    tombstones: TombstoneMap;
+    remote: DriveFile | null;
+    changed: boolean;
+  }> {
     const remote = await this.drive.read();
+    const localTasks = normalizeTasks(await this.store.getAll());
+    const localTombstones = await this.store.getTombstones();
 
     if (!remote) {
-      const tasks = await this.store.getAll();
-      await this.drive.write(tasks);
-      await this.store.setLastSyncedAt(new Date().toISOString());
-      await this.store.setPendingUpload(false);
-      return null;
+      return { tasks: localTasks, tombstones: localTombstones, remote: null, changed: false };
     }
 
-    const lastSynced = await this.store.getLastSyncedAt();
-    const remoteDate = new Date(remote.updatedAt);
-    const localDate = lastSynced ? new Date(lastSynced) : null;
-    if (!localDate || remoteDate > localDate) {
-      await this.store.setAll(remote.tasks);
-      await this.store.setLastSyncedAt(remote.updatedAt);
-      await this.store.setPendingUpload(false);
-      return remote.tasks;
-    }
+    const remoteTasks = normalizeTasks(remote.tasks);
+    const remoteTombstones = remote.tombstones ?? {};
+    const { tasks, tombstones } = mergeTaskState(localTasks, localTombstones, remoteTasks, remoteTombstones);
+    const changed = !isSameTaskMap(localTasks, tasks);
 
-    return null;
+    if (changed) await this.store.setAll(tasks);
+    await this.store.setTombstones(tombstones);
+
+    return { tasks, tombstones, remote, changed };
+  }
+
+  async syncFromDrive(): Promise<TaskMap | null> {
+    const { tasks, tombstones, remote, changed } = await this.mergeWithRemote();
+    if (!remote) {
+      await this.drive.write(tasks, tombstones);
+    }
+    await this.store.setLastSyncedAt(new Date().toISOString());
+    await this.store.setPendingUpload(false);
+    return changed ? tasks : null;
   }
 
   async flushToDrive(): Promise<void> {
-    const tasks = await this.store.getAll();
-    await this.drive.write(tasks);
+    // Merge with whatever is currently on Drive before pushing, so this
+    // client's local edits are combined with any other client's changes
+    // instead of overwriting them outright.
+    const { tasks, tombstones } = await this.mergeWithRemote();
+    await this.drive.write(tasks, tombstones);
     await this.store.setLastSyncedAt(new Date().toISOString());
     await this.store.setPendingUpload(false);
   }

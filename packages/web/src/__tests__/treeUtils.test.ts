@@ -3,7 +3,7 @@ import { getVisibleOrder, findParent } from '@myflowy/core';
 import type { TaskMap } from '@myflowy/core';
 
 function makeTask(id: string, children: string[] = [], collapsed = false) {
-  return { id, text: id, checked: false, pinned: false, collapsed, children };
+  return { id, text: id, checked: false, pinned: false, collapsed, children, updatedAt: '2026-01-01T00:00:00.000Z' };
 }
 
 describe('getVisibleOrder', () => {

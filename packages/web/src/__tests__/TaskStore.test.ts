@@ -45,7 +45,7 @@ describe('TaskStore', () => {
 
   describe('syncFromDrive', () => {
     it('updates tasks when drive returns new data', async () => {
-      const remoteTask: Task = { id: 'remote1', text: 'from drive', checked: false, pinned: false, collapsed: false, children: [] };
+      const remoteTask: Task = { id: 'remote1', text: 'from drive', checked: false, pinned: false, collapsed: false, children: [], updatedAt: '2026-01-01T00:00:00.000Z' };
       const remoteRoot = { ...initialRoot(), children: ['remote1'] };
       vi.mocked(engine.syncFromDrive).mockResolvedValueOnce({ root: remoteRoot, remote1: remoteTask });
 

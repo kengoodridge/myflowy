@@ -1,4 +1,4 @@
-import type { DriveFile, TaskMap } from '../types';
+import type { DriveFile, TaskMap, TombstoneMap } from '../types';
 import { findFolder, createFolder, findFile, findFileGlobal, readFile, createFile, updateFile } from './driveApi';
 
 const FOLDER_NAME = 'MyFlowy';
@@ -39,14 +39,15 @@ export class DriveSync {
     if (data.version !== FILE_VERSION) {
       throw new Error(`Unsupported DriveFile version: ${data.version}`);
     }
-    return data;
+    // Older files predate per-task tombstones — default to none.
+    return { ...data, tombstones: data.tombstones ?? {} };
   }
 
   getFileUrl(): string | null {
     return this.fileId ? `https://drive.google.com/file/d/${this.fileId}/view` : null;
   }
 
-  async write(tasks: TaskMap): Promise<void> {
+  async write(tasks: TaskMap, tombstones: TombstoneMap): Promise<void> {
     // Prefer global lookup over folder-scoped to avoid duplicate file creation
     if (!this.fileId) {
       const global = await findFileGlobal(FILE_NAME);
@@ -63,6 +64,7 @@ export class DriveSync {
     const file: DriveFile = {
       version: FILE_VERSION,
       tasks,
+      tombstones,
       updatedAt: new Date().toISOString(),
     };
     const content = JSON.stringify(file);

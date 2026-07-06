@@ -5,7 +5,7 @@ import type { TaskMap } from '@myflowy/core';
 import type { TaskStore } from '../store/TaskStore';
 
 function makeTask(id: string, text = '', children: string[] = []) {
-  return { id, text, checked: false, pinned: false, collapsed: false, children };
+  return { id, text, checked: false, pinned: false, collapsed: false, children, updatedAt: '2026-01-01T00:00:00.000Z' };
 }
 
 function makeMap(defs: Record<string, { text?: string; children?: string[] }>): TaskMap {

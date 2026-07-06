@@ -7,7 +7,7 @@ import type { TaskStore } from '../store/TaskStore';
 function makeMap(defs: Record<string, { text?: string; children?: string[] }>): TaskMap {
   const m: TaskMap = {};
   for (const [id, { text = id, children = [] }] of Object.entries(defs)) {
-    m[id] = { id, text, checked: false, pinned: false, collapsed: false, children };
+    m[id] = { id, text, checked: false, pinned: false, collapsed: false, children, updatedAt: '2026-01-01T00:00:00.000Z' };
   }
   return m;
 }

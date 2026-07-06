@@ -11,6 +11,7 @@ const task: Task = {
   pinned: false,
   collapsed: false,
   children: [],
+  updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
 describe('IDBLocalStore', () => {
@@ -34,6 +35,22 @@ describe('IDBLocalStore', () => {
     await store.set(task);
     await store.remove('task-1');
     expect(await store.get('task-1')).toBeUndefined();
+  });
+
+  it('records a tombstone when a task is removed', async () => {
+    await store.set(task);
+    await store.remove('task-1');
+    const tombstones = await store.getTombstones();
+    expect(tombstones['task-1']).toBeDefined();
+  });
+
+  it('tombstones default to empty', async () => {
+    expect(await store.getTombstones()).toEqual({});
+  });
+
+  it('stores and retrieves tombstones', async () => {
+    await store.setTombstones({ 'task-1': '2026-01-01T00:00:00.000Z' });
+    expect(await store.getTombstones()).toEqual({ 'task-1': '2026-01-01T00:00:00.000Z' });
   });
 
   it('getAll returns only tasks, not metadata keys', async () => {
