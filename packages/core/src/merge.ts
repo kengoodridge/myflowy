@@ -48,7 +48,53 @@ export function mergeTaskState(
     }
   }
 
+  reconcileChildren(tasks, tombstones, localTasks, remoteTasks);
+
   return { tasks, tombstones };
+}
+
+/**
+ * A task's children list is one field on that task's snapshot, so picking
+ * the newer whole snapshot for a parent can silently drop a child the
+ * *other* side added — the child a new task record merges in fine (nothing
+ * else claims that id), but if the parent object that should reference it
+ * loses the LWW pick, nothing points to it and it never renders.
+ *
+ * For any parent edited on both sides, union in children the winning
+ * snapshot is missing, unless that child is already claimed by some other
+ * (winning) parent — which means it was actually moved elsewhere, not just
+ * dropped, and re-adding it here would duplicate it into two parents.
+ */
+function reconcileChildren(
+  tasks: TaskMap,
+  tombstones: TombstoneMap,
+  localTasks: TaskMap,
+  remoteTasks: TaskMap,
+): void {
+  const claimedBy = new Set<string>();
+  for (const task of Object.values(tasks)) {
+    for (const childId of task.children) claimedBy.add(childId);
+  }
+
+  for (const [id, merged] of Object.entries(tasks)) {
+    const local = localTasks[id];
+    const remote = remoteTasks[id];
+    if (!local || !remote) continue; // only one side has an opinion on this task — nothing to reconcile
+
+    const seen = new Set(merged.children);
+    const additions: string[] = [];
+    for (const childId of [...local.children, ...remote.children]) {
+      if (seen.has(childId)) continue;
+      if (tombstones[childId]) continue; // deleted — don't resurrect
+      if (claimedBy.has(childId)) continue; // already placed under a different winning parent (moved, not dropped)
+      seen.add(childId);
+      claimedBy.add(childId);
+      additions.push(childId);
+    }
+    if (additions.length > 0) {
+      tasks[id] = { ...merged, children: [...merged.children, ...additions] };
+    }
+  }
 }
 
 export function isSameTaskMap(a: TaskMap, b: TaskMap): boolean {
